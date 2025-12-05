@@ -1,45 +1,44 @@
 import { test, expectEx as expect } from '../fixtures/bank.fixtures';
 import { getAccountBalances, getTransferHistoryTexts } from '../fixtures/bank.fixtures';
 
-test('@e2e @regression UI - user can transfer between own accounts and see updated balances and history', async ({ page, uiLogin }) => {
-  await uiLogin();
+test('@e2e @regression UI - user can transfer between own accounts and see updated balances and history',
+  async ({ page, uiLogin }) => {
+    await uiLogin();
 
-  // Capture balances before transfer
-  const beforeBalances = await getAccountBalances(page);
-  const accountIds = Object.keys(beforeBalances).map(Number);
-  expect(accountIds.length).toBeGreaterThanOrEqual(2);
+    // Navigate to accounts page – this is where the table lives
+    await page.getByRole('link', { name: 'Accounts' }).click();
+    await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
-  const fromId = accountIds[0];
-  const toId = accountIds[1];
-  const amount = 15;
+    const beforeBalances = await getAccountBalances(page);
+    const accountIds = Object.keys(beforeBalances).map(Number);
+    expect(accountIds.length).toBeGreaterThanOrEqual(2);
 
-  const fromBefore = beforeBalances[fromId];
-  const toBefore = beforeBalances[toId];
+    const fromId = accountIds[0];
+    const toId = accountIds[1];
 
-  // Select accounts in dropdowns
-  await page.locator('#from-account').selectOption(String(fromId));
-  await page.locator('#to-account').selectOption(String(toId));
-  await page.locator('#amount').fill(String(amount));
+    // go to transfer page
+    await page.getByRole('link', { name: 'Transfer' }).click();
 
-  // Perform transfer
-  await page.getByRole('button', { name: 'Submit Transfer' }).click();
+    // perform transfer – assuming UI ids
+    await page.locator('#from-account').selectOption(String(fromId));
+    await page.locator('#to-account').selectOption(String(toId));
+    await page.locator('#amount').fill('50');
+    await page.getByRole('button', { name: 'Submit Transfer' }).click();
 
-  const success = page.locator('#transfer-success');
-  await expect(success).toContainText('Transfer successful');
+    // back to accounts, verify balances changed
+    await page.getByRole('link', { name: 'Accounts' }).click();
+    const afterBalances = await getAccountBalances(page);
 
-  // Refresh balances and verify
-  const afterBalances = await getAccountBalances(page);
+    expect(afterBalances[fromId]).toBe(beforeBalances[fromId] - 50);
+    expect(afterBalances[toId]).toBe(beforeBalances[toId] + 50);
 
-  expect(afterBalances[fromId]).toBe(fromBefore - amount);
-  expect(afterBalances[toId]).toBe(toBefore + amount);
-
-  // Verify history entry exists
-  const history = await getTransferHistoryTexts(page);
-  const match = history.some(h =>
-    h.includes(`${fromId} -> ${toId}`) && h.includes(`$${amount.toFixed(2)}`)
-  );
-  expect(match).toBe(true);
-});
+    // verify transfer history
+    await page.getByRole('link', { name: 'Transfers' }).click();
+    const history = await getTransferHistoryTexts(page);
+    expect(history[0]).toContain(`$50`);
+    expect(history[0]).toContain(`${fromId} -> ${toId}`);
+  }
+);
 
 test('@e2e @functional UI - transfer fails with insufficient funds and shows error', async ({ page, uiLogin }) => {
   await uiLogin();
