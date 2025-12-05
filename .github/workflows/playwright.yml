@@ -31,6 +31,7 @@ jobs:
           npx playwright test --grep "@smoke" --project=chromium-smoke --reporter=html,github
         env:
           CI: true
+          APP_URL: https://banking-sample-app.onrender.com
 
       - name: Upload Playwright smoke report
         if: always()
@@ -65,6 +66,7 @@ jobs:
           npx playwright test --grep "@regression" --project=chromium-regression --reporter=html,github
         env:
           CI: true
+          APP_URL: https://banking-sample-app.onrender.com
 
       - name: Upload Playwright regression report (chromium)
         if: always()
@@ -79,6 +81,7 @@ jobs:
           npx playwright test --grep "@regression" --project=firefox-regression --reporter=html,github
         env:
           CI: true
+          APP_URL: https://banking-sample-app.onrender.com
 
       - name: Upload Playwright regression report (firefox)
         if: always()
