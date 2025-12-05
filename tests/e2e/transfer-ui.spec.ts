@@ -5,7 +5,7 @@ test('@e2e @regression UI - user can transfer between own accounts and see updat
   async ({ page, uiLogin }) => {
     await uiLogin();
 
-    // We land on the accounts page after uiLogin, so assert rows directly
+    // We land on /accounts after uiLogin
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
     const beforeBalances = await getAccountBalances(page);
@@ -15,24 +15,27 @@ test('@e2e @regression UI - user can transfer between own accounts and see updat
     const fromId = accountIds[0];
     const toId = accountIds[1];
 
-    // Navigate to transfer page (this link DOES exist – verify the exact text)
-    await page.getByRole('link', { name: 'Transfer' }).click();
+    // Go directly to transfer form URL instead of relying on a nav link text
+    await page.goto('/transfer');
 
     await page.locator('#from-account').selectOption(String(fromId));
     await page.locator('#to-account').selectOption(String(toId));
     await page.locator('#amount').fill('50');
     await page.getByRole('button', { name: 'Submit Transfer' }).click();
 
-    // Back to accounts – use the actual link text in your UI, e.g. 'Accounts'
-    await page.getByRole('link', { name: 'Accounts' }).click();
+    // Back to accounts page via direct URL
+    await page.goto('/accounts');
+    await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
     const afterBalances = await getAccountBalances(page);
     expect(afterBalances[fromId]).toBe(beforeBalances[fromId] - 50);
     expect(afterBalances[toId]).toBe(beforeBalances[toId] + 50);
 
-    // Transfers history page – adjust name to your real nav text
-    await page.getByRole('link', { name: 'Transfers' }).click();
+    // Go to transfers history URL
+    await page.goto('/transfers');
     const history = await getTransferHistoryTexts(page);
+
+    expect(history.length).toBeGreaterThan(0);
     expect(history[0]).toContain('$50');
     expect(history[0]).toContain(`${fromId} -> ${toId}`);
   }
