@@ -19,6 +19,7 @@ test(
 
     const fromId = accountIds[0];
     const toId = accountIds[1];
+    const amount = 10; // app uses $10.00 in history
 
     // 2. Perform transfer using REAL ids and labels from your HTML.
     const fromSelect = page.getByLabel('From Account:');
@@ -29,24 +30,22 @@ test(
     await expect(toSelect).toBeVisible();
     await expect(amountInput).toBeVisible();
 
-    await fromSelect.selectOption(String(fromId));  // <select id="from-account">
-    await toSelect.selectOption(String(toId));      // <select id="to-account">
-    await amountInput.fill('50');
+    await fromSelect.selectOption(String(fromId));
+    await toSelect.selectOption(String(toId));
+    await amountInput.fill(String(amount));
 
-    await page.locator('#transfer-button').click(); // <button id="transfer-button">
+    await page.locator('#transfer-button').click();
 
     // 3. Wait for success message.
     const successMessage = page.locator('#transfer-success');
     await expect(successMessage).toBeVisible();
-    // optional: assert text only if you set one
-    // await expect(successMessage).toContainText('Transfer successful');
 
     // 4. Re-read accounts table on same page.
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
     const afterBalances = await getAccountBalances(page);
 
-    expect(afterBalances[fromId]).toBe(beforeBalances[fromId] - 50);
-    expect(afterBalances[toId]).toBe(beforeBalances[toId] + 50);
+    expect(afterBalances[fromId]).toBe(beforeBalances[fromId] - amount);
+    expect(afterBalances[toId]).toBe(beforeBalances[toId] + amount);
 
     // 5. Verify transfer history list.
     const historyList = page.locator('#transfer-history');
@@ -54,7 +53,7 @@ test(
 
     const history = await getTransferHistoryTexts(page);
     expect(history.length).toBeGreaterThan(0);
-    expect(history[0]).toContain('$50');
+    expect(history[0]).toContain(`$${amount}.00`);
     expect(history[0]).toContain(`${fromId} -> ${toId}`);
   },
 );
