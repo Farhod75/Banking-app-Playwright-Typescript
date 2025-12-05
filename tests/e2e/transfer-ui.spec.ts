@@ -10,7 +10,7 @@ test(
   async ({ page, uiLogin }) => {
     await uiLogin();
 
-    // We land on /accounts after login: Accounts table visible
+    // We land on /accounts after login
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
     const beforeBalances = await getAccountBalances(page);
@@ -20,20 +20,20 @@ test(
     const fromId = accountIds[0];
     const toId = accountIds[1];
 
-    // Go directly to transfer view
+    // Go to transfer – wait for the form to be visible, not the heading
     await page.goto('/transfer');
+    await expect(page.locator('#from-account-select')).toBeVisible();
 
-    // Assert we are on Transfer section
-    await expect(page.getByRole('heading', { name: 'Transfer', level: 2 })).toBeVisible();
-
-    // Use the REAL ids: from-account-select / to-account-select
     await page.locator('#from-account-select').selectOption(String(fromId));
     await page.locator('#to-account-select').selectOption(String(toId));
     await page.locator('#amount').fill('50');
 
     await page.getByRole('button', { name: 'Submit Transfer' }).click();
 
-    // Back to /accounts and verify balances
+    // Wait for success message or redirect
+    await expect(page.locator('#transfer-success')).toBeVisible({ timeout: 5000 });
+
+    // Back to /accounts
     await page.goto('/accounts');
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
@@ -44,9 +44,7 @@ test(
 
     // Check transfer history
     await page.goto('/transfers');
-    await expect(
-      page.getByRole('heading', { name: 'Transfer History', level: 2 }),
-    ).toBeVisible();
+    await expect(page.locator('#transfer-history')).toBeVisible();
 
     const history = await getTransferHistoryTexts(page);
     expect(history.length).toBeGreaterThan(0);
