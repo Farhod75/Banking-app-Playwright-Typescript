@@ -1,5 +1,19 @@
 import { test as base, expect, APIRequestContext, Page } from '@playwright/test';
 
+async function waitForAppReady(baseURL: string, timeoutMs = 60000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`${baseURL}/health`, { method: 'GET' });
+      if (res.ok) return;
+    } catch {
+      // ignore and retry
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error(`App at ${baseURL} not ready within ${timeoutMs} ms`);
+}
+
 type User = {
   username: string;
   password: string;
@@ -31,6 +45,11 @@ export const test = base.extend<Fixtures>({
 
   uiLogin: async ({ page, userAlice, baseURL }, use) => {
     await use(async () => {
+      // wait for deployed app to be up (handles Render cold starts)
+      if (baseURL) {
+        await waitForAppReady(baseURL);
+      }
+
       await page.goto('/');
       await page.getByLabel('Username:').fill(userAlice.username);
       await page.getByLabel('Password:').fill(userAlice.password);
@@ -40,6 +59,7 @@ export const test = base.extend<Fixtures>({
     });
   },
 });
+
 export async function getAccountBalances(page: Page) {
   const rows = page.locator('#accounts-table-body tr');
   const count = await rows.count();
@@ -68,4 +88,5 @@ export async function getTransferHistoryTexts(page: Page) {
   }
   return result;
 }
+
 export const expectEx = expect;

@@ -1,6 +1,7 @@
 import { test, expectEx as expect } from '../fixtures/bank.fixtures';
 
 test('@api @smoke API - login with valid credentials', async ({ apiContext, userAlice }) => {
+    await apiContext.get('/health'); // ensure server is up
   const res = await apiContext.post('/api/login', {
     data: {
       username: userAlice.username,
@@ -17,6 +18,7 @@ test('@api @smoke API - login with valid credentials', async ({ apiContext, user
 });
 
 test('@api API - login with invalid credentials fails', async ({ apiContext }) => {
+    await apiContext.get('/health');
   const res = await apiContext.post('/api/login', {
     data: {
       username: 'wrong',
@@ -31,6 +33,7 @@ test('@api API - login with invalid credentials fails', async ({ apiContext }) =
 
 test('@api @regression API - list accounts after login', async ({ apiContext, userAlice }) => {
   // login first to establish session
+  await apiContext.get('/health');
   const loginRes = await apiContext.post('/api/login', {
     data: {
       username: userAlice.username,
@@ -54,6 +57,7 @@ test('@api @regression API - list accounts after login', async ({ apiContext, us
 
 test('@api @regression API - successful transfer between user accounts', async ({ apiContext, userAlice }) => {
   // login to get session
+  await apiContext.get('/health');
   const loginRes = await apiContext.post('/api/login', {
     data: {
       username: userAlice.username,
@@ -106,6 +110,7 @@ test('@api @regression API - successful transfer between user accounts', async (
 });
 
 test('@api API - transfer with insufficient funds fails', async ({ apiContext, userAlice }) => {
+    await apiContext.get('/health');
   const loginRes = await apiContext.post('/api/login', {
     data: {
       username: userAlice.username,
