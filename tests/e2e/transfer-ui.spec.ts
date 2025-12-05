@@ -10,7 +10,7 @@ test(
   async ({ page, uiLogin }) => {
     await uiLogin();
 
-    // We land on /accounts after login
+    // 1. We are on the main app section with accounts + transfer + history.
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
 
     const beforeBalances = await getAccountBalances(page);
@@ -20,31 +20,37 @@ test(
     const fromId = accountIds[0];
     const toId = accountIds[1];
 
-    // Go to transfer – wait for the form to be visible, not the heading
-    await page.goto('/transfer');
-    await expect(page.locator('#from-account-select')).toBeVisible();
+    // 2. Perform transfer using REAL ids and labels from your HTML.
+    const fromSelect = page.getByLabel('From Account:');
+    const toSelect = page.getByLabel('To Account:');
+    const amountInput = page.getByLabel('Amount:');
 
-    await page.locator('#from-account-select').selectOption(String(fromId));
-    await page.locator('#to-account-select').selectOption(String(toId));
-    await page.locator('#amount').fill('50');
+    await expect(fromSelect).toBeVisible();
+    await expect(toSelect).toBeVisible();
+    await expect(amountInput).toBeVisible();
 
-    await page.getByRole('button', { name: 'Submit Transfer' }).click();
+    await fromSelect.selectOption(String(fromId));  // <select id="from-account">
+    await toSelect.selectOption(String(toId));      // <select id="to-account">
+    await amountInput.fill('50');
 
-    // Wait for success message or redirect
-    await expect(page.locator('#transfer-success')).toBeVisible({ timeout: 5000 });
+    await page.locator('#transfer-button').click(); // <button id="transfer-button">
 
-    // Back to /accounts
-    await page.goto('/accounts');
+    // 3. Wait for success message.
+    const successMessage = page.locator('#transfer-success');
+    await expect(successMessage).toBeVisible();
+    // optional: assert text only if you set one
+    // await expect(successMessage).toContainText('Transfer successful');
+
+    // 4. Re-read accounts table on same page.
     await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
-
     const afterBalances = await getAccountBalances(page);
 
     expect(afterBalances[fromId]).toBe(beforeBalances[fromId] - 50);
     expect(afterBalances[toId]).toBe(beforeBalances[toId] + 50);
 
-    // Check transfer history
-    await page.goto('/transfers');
-    await expect(page.locator('#transfer-history')).toBeVisible();
+    // 5. Verify transfer history list.
+    const historyList = page.locator('#transfer-history');
+    await expect(historyList).toBeVisible();
 
     const history = await getTransferHistoryTexts(page);
     expect(history.length).toBeGreaterThan(0);
