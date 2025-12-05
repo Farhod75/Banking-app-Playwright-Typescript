@@ -40,5 +40,32 @@ export const test = base.extend<Fixtures>({
     });
   },
 });
+export async function getAccountBalances(page: Page) {
+  const rows = page.locator('#accounts-table-body tr');
+  const count = await rows.count();
+  const result: Record<number, number> = {};
 
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const idText = await row.locator('td').nth(0).innerText();
+    const balanceText = await row.locator('td').nth(2).innerText();
+
+    const id = Number(idText.trim());
+    const balance = Number(balanceText.trim());
+
+    result[id] = balance;
+  }
+
+  return result;
+}
+
+export async function getTransferHistoryTexts(page: Page) {
+  const items = page.locator('#transfer-history li');
+  const count = await items.count();
+  const result: string[] = [];
+  for (let i = 0; i < count; i++) {
+    result.push((await items.nth(i).innerText()).trim());
+  }
+  return result;
+}
 export const expectEx = expect;
