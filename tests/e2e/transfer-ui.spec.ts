@@ -72,3 +72,60 @@ test(
     expect(history[0]).toContain(String(toId));
   },
 );
+
+test(
+  '@e2e @regression UI - transfer with invalid amount shows error and does not change balances or history',
+  async ({ page, uiLogin }) => {
+    await uiLogin();
+
+    // 1. We are on the main app section with accounts + transfer + history.
+    await expect(page.locator('#accounts-table-body tr')).toHaveCount(2);
+
+    const beforeBalances = await getAccountBalances(page);
+    const accountIds = Object.keys(beforeBalances).map(Number);
+    expect(accountIds.length).toBeGreaterThanOrEqual(2);
+
+    const fromId = accountIds[0];
+    const toId = accountIds[1];
+    const invalidAmount = 0;
+
+    // Capture history length before invalid transfer.
+    const beforeHistory = await getTransferHistoryTexts(page);
+    const beforeHistoryLength = beforeHistory.length;
+
+    // 2. Attempt invalid transfer using amount = 0.
+    const fromSelect = page.getByLabel('From Account:');
+    const toSelect = page.getByLabel('To Account:');
+    const amountInput = page.getByLabel('Amount:');
+
+    await expect(fromSelect).toBeVisible();
+    await expect(toSelect).toBeVisible();
+    await expect(amountInput).toBeVisible();
+
+    await fromSelect.selectOption(String(fromId));
+    await toSelect.selectOption(String(toId));
+    await amountInput.fill(String(invalidAmount));
+
+    await page.locator('#transfer-button').click();
+
+    // 3. Expect error, no success.
+    const errorMessage = page.locator('#transfer-error');
+    const successMessage = page.locator('#transfer-success');
+
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).not.toHaveText('', { timeout: 1000 });
+    await expect(successMessage).toHaveText('');
+
+    // 4. Balances must be unchanged.
+    const afterBalances = await getAccountBalances(page);
+    expect(afterBalances[fromId]).toBe(beforeBalances[fromId]);
+    expect(afterBalances[toId]).toBe(beforeBalances[toId]);
+
+    // 5. History must be unchanged (no new entry).
+    const afterHistory = await getTransferHistoryTexts(page);
+    expect(afterHistory.length).toBe(beforeHistoryLength);
+    if (beforeHistoryLength > 0) {
+      expect(afterHistory[0]).toBe(beforeHistory[0]);
+    }
+  },
+);
